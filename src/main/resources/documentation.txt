@@ -1,0 +1,103 @@
+ESTIAGE
+A Program to estimate the age of the Most Recent Common Ancestor of patients who carry rare mutations
+
+Emmanuelle GENIN (1) and Laurent ABEL (2)
+(1) INSERM U535, Hôpital Paul Brousse, Villejuif
+(2) INSERM U550, Faculté de Médecine Necker, Paris
+
+
+
+DISTRIBUTION
+The program is available upon request to genin@vjf.inserm.fr.
+C-language source files will be provided to compile on your computer.
+Unzip and Untar the file estiage.tar.gz using either
+tar xzvf estiage.tar.gz
+or gunzip estiage.tar.gz and tar xvf estiage.tar
+Three files will be extracted
+1) ageofmut.h : a libray of functions and procedures used by the main program
+2) estiage.c : the main program
+3) dataAAA.in : an example of input file
+Compile the program : cc estiage.c -o estiage -lm
+
+HOW TO RUN THE PROGRAM
+Call the program followed by the name of the input file
+For instance : ./estiage dataAAA.in
+to run the program on the dataset dataAAA.in provided
+
+INPUT DATA FORMAT
+The format of the input file is as followed
+1st line : should contain 3 integers : the number of patients in the sample,
+the number of markers on the left side of the mutation
+and the number of markers on the right side of the mutation
+
+2nd line : recombination fractions between the mutation and each marker on the left side (mutation-M1 mutation-M2 ...). If N markers are present on the left, this line should contain N real numbers.
+
+3rd line : frequencies of the shared allele at each marker on the left side.  Note that if a sequential sequencing is performed to detect for each patient the first discordant marker on each side, there should not be any shared allele at the last marker and thus the corresponding frequency may be missing.
+Thus if there are N markers, there should be at least N-1 frequencies specified.
+
+4th line : recombination fractions between the mutation and each marker on the right side
+
+5th line : frequencies of the shared allele at each marker of the right side.
+
+6th line : mutation rate at the markers and mutation model (0 : each mutation is equally likely or 1 : stepwise mutation model - see article for more information). This line contains only two values as the same mutation rate and the same mutation model is assumed for all markers.
+
+7th line : shared haplotype on the left side - starting from the mutation, give for each marker the observed allele shared by patients: alleles at the different markers are space-separated. If the shared allele at one marker is unknown: put -1.
+For example : 5 1 1 1 2 -1 means that the shared haplotype is known at 5 out of the 6 markers on the left side and is ?-2-1-1-1-5-Mutation
+
+8th line : shared haplotype on the right side (see 7th line)
+For example : 3 1 6 2 1 -1 means that the shared haplotype on the right side is Mutation-3-1-6-2-1-?
+
+9th line and next lines : for each patient: 1) number of the first marker on the left side where allele is not shared, 2) number of the first marker on the right side where allele is not shared, 3) observed allele at this marker on the left side, 4) observed allele at this marker on the right side.
+
+EXAMPLE OF INPUT FILE
+Dataset analysed in Génin et al. (2004):
+
+Table 1. Haplotypes encompassing AAAS  in nine unrelated patients (P1-P9)
+Patient  M6  M5  M4  M3  M2  M1  AAAS  M1  M2  M3  M4  M5  M6
+P1        1   2  1   1   1   5   Mut   3   1   1
+P2	      5   2  1   1   1   5   Mut   3   1   6   2   1   2
+P3        4   2  1   1   1   5   Mut   3   1   3
+P4            1  1   1   1   5   Mut   3   4
+P5               2   1   1   5   Mut   3   2
+P6               4   1   1   5   Mut   3   1   6   2   1   3
+P7               2   1   1   5   Mut   3   1   4
+P8                   3   1   5   Mut   3   2
+P9                   2   1   5   Mut   3   3
+Freq     -  .42	.01 .02	.27 .22	 Mut .19  .46 .21 .07 .04  -
+
+The corresponding input file will be:
+
+9 6 6
+0.0001 0.0002 0.007 0.0108 0.0466 0.0508
+0.22 0.27 0.02 0.01 0.42
+0.0026 0.0084 0.0271 0.0339 0.0516 0.1032
+0.19 0.46 0.21 0.07 0.04
+0.001 0
+5 1 1 1 2 -1
+3 1 6 2 1 -1
+6 3 1 1
+6 6 5 2
+6 3 4 3
+5 2 1 4
+4 2 2 2
+4 6 4 3
+4 3 2 4
+3 2 3 2
+3 2 2 3
+
+RESULTS
+Output results are printed on one line:
+n is the estimated number of generations
+nend is the total number of iterations performed
+ninf is the lower bound of the 95% CI
+nsup is the upper bound of the 95% CI
+likelihood is the corresponding likelihood
+
+For example on the file dataAAA.in: the output will be
+n = 47, nend = 128, ninf = 28, nsup = 80, likelihood = -26.412115
+meaning that the estimated number of generations is 47 with a 95% CI of [28, 80]
+
+
+REFERENCE
+
+E. Genin, A. Tullio-Pelet, F. Begeot, S. Lyonnet, and L. Abel (2004). Estimating the age of rare disease mutations: the example of Triple-A syndrome J Med Genet 41: 445-449
