@@ -1,5 +1,8 @@
 package fr.inserm.u1078.estiage;
 
+import fr.inserm.u1078.tludwig.maok.UniversalReader;
+import fr.inserm.u1078.tludwig.maok.tools.Message;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -53,10 +56,104 @@ public class InputFile {
     right = load(/*RIGHT, */raw.getRightMarkers(), raw.getSamples());//, rightFractions, rightFrequencies, rightAncestral);
   }
 
-  public static final int LEFT = 0;
-  public static final int RIGHT = 1;
-  public static final int IP = 0;
-  public static final int IV = 2;
+  /**
+   * Constructor. Builds an InputFile object from a serialized input file
+   * @param preinputFile
+   * @throws EstiageFormatException
+   * @throws IOException
+   */
+  public InputFile(String preinputFile) throws EstiageFormatException, IOException {
+    UniversalReader in = new UniversalReader(preinputFile);
+    String[] f;
+    int line = 0;
+    try {
+      //header
+      line++;
+      f = in.readLine().split(S, -1);
+      this.nbSamples = new Integer(f[0]);
+      int nbLeft = new Integer(f[1]);
+      int nbRight = new Integer(f[2]);
+
+      double[] fractionsLeft = new double[nbLeft];
+      String[] frequenciesLeft = new String[nbLeft];
+      String[] ancestralLeft = new String[nbLeft];
+
+      double[] fractionsRight = new double[nbRight];
+      String[] frequenciesRight = new String[nbRight];
+      String[] ancestralRight = new String[nbRight];
+
+      int[] positionsLeft = new int[nbSamples];
+      String[] endLeft = new String[nbSamples];
+      int[] positionsRight = new int[nbSamples];
+      String[] endRight = new String[nbSamples];
+
+      //fracleft
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbLeft; i++)
+        fractionsLeft[i] = new Double(f[i]);
+
+      //freqleft
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbLeft; i++)
+        frequenciesLeft[i] = f[i];
+
+      //fracright
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbRight; i++)
+        fractionsRight[i] = new Double(f[i]);
+
+      //freqright
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbRight; i++)
+        frequenciesRight[i] = f[i];
+
+      //mutation
+      line++;
+      f = in.readLine().split(S, -1);
+      this.mutationRate = new Double(f[0]);
+      this.mutationModel = new Integer(f[1]);
+
+      //ancestralleft
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbLeft; i++)
+        ancestralLeft[i] = f[i];
+
+      //ancestralright
+      line++;
+      f = in.readLine().split(S, -1);
+      for(int i = 0 ; i < nbRight; i++)
+        ancestralRight[i] = f[i];
+
+      // samples
+      for(int i = 0 ; i < nbSamples; i++) {
+        line++;
+        f = in.readLine().split(S, -1);
+        positionsLeft[i] = new Integer(f[0]);
+        positionsRight[i] = new Integer(f[1]);
+        endLeft[i] = f[2];
+        endRight[i] = f[3];
+      }
+
+      this.left = new Side(nbLeft, fractionsLeft, frequenciesLeft, ancestralLeft, positionsLeft, endLeft);
+      this.right = new Side(nbRight, fractionsRight, frequenciesRight, ancestralRight, positionsRight, endRight);
+    } catch(NullPointerException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
+      throw new EstiageFormatException("Unable to parse input file ["+preinputFile+"] on line ["+line+"]", e);
+    }
+    in.close();
+  }
+
+  /**
+   * Converts a preinput file to an input file
+   */
+  public void fromPreinput2Input(){
+    left.fromPreinput2Input();
+    right.fromPreinput2Input();
+  }
 
   public static boolean noValue(String s){
     if("-1".equals(s))
@@ -64,7 +161,13 @@ public class InputFile {
     return s.isEmpty();
   }
 
-  private Side load(/*int side, */Marker[] markers, String[] samples){//}, double[] fractions, double[] frequencies, String[] ancestrals){
+  /**
+   * Creates a Side object from Markers and Samples
+   * @param markers
+   * @param samples
+   * @return
+   */
+  private Side load(Marker[] markers, String[] samples){
     int nb = markers.length;
     boolean ambiguous = !noValue(markers[nb-1].getAncestral());
 
@@ -115,6 +218,11 @@ public class InputFile {
   public static final String S = " ";
   public static final String N = "\n";
 
+  /**
+   * Exports an InputFile object to a file
+   * @param filename
+   * @throws IOException
+   */
   public void printToFile(String filename) throws IOException {
     StringBuilder sb = new StringBuilder();
     line(sb, nbSamples, left.getNb(), right.getNb());
@@ -158,6 +266,30 @@ public class InputFile {
     sb.append(String.join(S, values)).append(N);
   }
 
+  private static boolean isSNP(String s){
+    if(s.equals("A") || s.equals("a"))
+      return true;
+    if(s.equals("C") || s.equals("c"))
+      return true;
+    if(s.equals("G") || s.equals("g"))
+      return true;
+    if(s.equals("T") || s.equals("t"))
+      return true;
+    return false;
+  }
+
+  private static boolean isMicrosat(String s){
+    try{
+      int n = new Integer(s);
+      return n > 0;
+    } catch(NumberFormatException e) {
+      return false;
+    }
+  }
+
+  /**
+   * Class that represents the data on one side of the Marker
+   */
   private class Side {
     private final int nb;
     private final double[] fractions;
@@ -197,6 +329,54 @@ public class InputFile {
 
     public String[] getEndAlleles() {
       return endAlleles;
+    }
+
+    public void fromPreinput2Input(){
+      for(int i = 0 ; i < nb; i++){
+        //if ancestral is -1/end
+        if(ancestral[i].equals("-1")) {
+          for(int s = 0; s < nbSamples; s++)
+            if(endPositions[s] == i+1)
+              endAlleles[s] = "1";
+        }
+        //if ancestral is a snp
+        else if(isSNP(ancestral[i])) {
+          for(int s = 0; s < nbSamples; s++)
+            if(endPositions[s] == i+1) {
+              if(ancestral[i].equals(endAlleles[s]))
+                endAlleles[s] = "1";
+              else if(isSNP(endAlleles[s]))
+                endAlleles[s] = "2";
+              else
+                Message.error("Cannot convert endAllele (position:"+i+", sample:"+s+", allele:"+endAlleles[s]+", ancestral:"+ancestral[i]+")");
+            }
+          ancestral[i] = "1";
+        }
+        //if ancestral is a microsat
+        else if(isMicrosat(ancestral[i])) {
+          int n = new Integer(ancestral[i]);
+          int even = n%2;
+          for(int s = 0; s < nbSamples; s++){
+            if(endPositions[s] == i+1){
+              if(ancestral[i].equals(endAlleles[s]))
+                endAlleles[s] = "1";
+              else if(isMicrosat(endAlleles[s])){
+                int v = new Integer(endAlleles[s]);
+                if(even != v%2)
+                  Message.warning("Parity problem on endAllele (position:"+i+", sample:"+s+", allele:"+endAlleles[s]+", ancestral:"+ancestral[i]+")");
+                int d = 1 + Math.abs(n - v) / 2;
+                endAlleles[s] = ""+d;
+              } else
+                Message.error("Cannot convert endAllele (position:"+i+", sample:"+s+", allele:"+endAlleles[s]+", ancestral:"+ancestral[i]+")");
+            }
+          }
+          ancestral[i] = "1";
+        }
+        //else
+        else {
+          Message.error("Cannot convert ancestral ["+ancestral[i]+"]");
+        }
+      }
     }
   }
 }
