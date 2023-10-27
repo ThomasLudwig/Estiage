@@ -20,7 +20,7 @@ public class Marker {
   private String chr;
   private int position;
   private double megaBases;
-  private double distance;
+  private double distanceMb;
   private double cM;
   private double recombinationFraction;
   private double rate;
@@ -52,8 +52,8 @@ public class Marker {
       haplotypes.put(samples[i], f[2]);
   }
 
-  public void setDistance(Marker target){
-    this.distance = Math.abs(this.megaBases - target.megaBases);
+  public void setDistanceMb(Marker target){
+    this.distanceMb = Math.abs(this.megaBases - target.megaBases);
   }
 
   public void setChromosomeAndPosition(String chrpos){
@@ -135,25 +135,11 @@ public class Marker {
 
   public void setRate(double rate){
     this.rate = rate;
-    applyKosambi();
-  }
-
-  /**
-   * kosambi function
-   * See http://www.crypticlineage.net/lib/Kosambi.pdf
-   * https://www.ias.ac.in/public/Volumes/reso/016/06/0540-0550.pdf page 9
-   */
-  public void applyKosambi() {
     //rate from hapmap is in cm/Mb, so cm = rate * dist_Mb
     //1cM = 1% recombination
-    this.cM = this.rate * this.distance;
-    //d is the recombination frequency in Morgans
-    //r is the observed recombination fraction
+    this.cM = MathLib.getCentiMorgan(this.rate, this.distanceMb);
     double d = this.cM / 100; //from cMorgans to Morgans
-    //(1) d = .25 * ln(1+2r / 1-2r)
-    //(2) r = (e^(4d) - 1)/2(e^(4d) + 1)
-    double exp = Math.exp(4*d);
-    this.recombinationFraction = 0.5 * (exp - 1) / (exp + 1);
+    this.recombinationFraction = MathLib.kosambiTheta(d);
   }
 
   public String getChromosome(){
@@ -164,8 +150,8 @@ public class Marker {
     return name;
   }
 
-  public double getDistance() {
-    return distance;
+  public double getDistanceMb() {
+    return distanceMb;
   }
 
   public double getMegaBases() {

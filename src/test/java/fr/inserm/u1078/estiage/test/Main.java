@@ -1,6 +1,7 @@
 package fr.inserm.u1078.estiage.test;
 
 import fr.inserm.u1078.estiage.EstiageCTranslation;
+import fr.inserm.u1078.estiage.MathLib;
 import fr.inserm.u1078.estiage.TSVFile;
 
 /**
@@ -13,7 +14,22 @@ import fr.inserm.u1078.estiage.TSVFile;
  */
 public class Main {
   public static void main(String[] arg) throws Exception {
-    testrun();
+    //phase();
+    testKosambi();
+  }
+
+  private static void testKosambi(){
+    double tau = 0.2776; //in Morgan
+    for(int i = 1 ; i <= 10; i++){
+      double theta = MathLib.kosambiTheta(tau);
+      double tau2 = MathLib.kosambiTau(theta);
+      System.out.println("Tau "+tau+"->"+tau2+"     "+(tau/tau2)+" ----------- "+theta);
+    }
+  }
+
+  private static final void phase() throws Exception {
+    String input = "C:\\Users\\Thomas Ludwig\\Documents\\Projet\\Estiage\\data.unphased.teresa.txt";
+    fr.inserm.u1078.estiage.Main.main(new String[]{fr.inserm.u1078.estiage.Main.KEY_PHASE, input, "10", "chr19:4567894"});
   }
 
   private static final void testLoad() throws Exception {

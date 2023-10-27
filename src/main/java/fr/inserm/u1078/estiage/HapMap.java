@@ -169,10 +169,7 @@ public class HapMap {
     return ret;
   }
 
-  //not rate at the marker, but mean rate between the marker and the target ?
-  public void applyRate(Marker m, Marker target) throws EstiageFormatException {
-    int p1 = Math.min(m.getPosition(), target.getPosition());
-    int p2 = Math.max(m.getPosition(), target.getPosition());
+  public double getRate(int p1, int p2) throws EstiageFormatException {
     //Message.debug("From ["+p1+"] to ["+p2+"]");
     //add points if missing
     addMarker(p1);
@@ -182,7 +179,7 @@ public class HapMap {
     ArrayList<Integer> points = getPositions(p1, p2);
 
     double rateSum = 0;
-    int distance = 1 + p2 - p1;
+
     double rightValue = 0;
     for(int i = 1; i < points.size(); i++){
       int left = points.get(i-1);
@@ -197,11 +194,11 @@ public class HapMap {
     }
     //here, add right
     rateSum += rightValue;
-
+    int distance = 1 + p2 - p1;
     //Message.debug("Mean["+(rateSum / distance)+"]=["+rateSum+"]/["+distance+"]");
-    m.setRate(rateSum / distance);
+    return rateSum / distance;
 
-    /*
+        /*
     double sum = 0;
     for(int p = p1; p <= p2; p++) {
       Double rate = mutationRates.get(p);
@@ -220,5 +217,12 @@ public class HapMap {
     }
     double rate = sum / (1+p2-p1);
     m.setRate(rate);*/
+  }
+
+  //not rate at the marker, but mean rate between the marker and the target ?
+  public void applyRate(Marker m, Marker target) throws EstiageFormatException {
+    int p1 = Math.min(m.getPosition(), target.getPosition());
+    int p2 = Math.max(m.getPosition(), target.getPosition());
+    m.setRate(getRate(p1, p2));
   }
 }

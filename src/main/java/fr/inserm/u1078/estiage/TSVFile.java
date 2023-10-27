@@ -136,7 +136,7 @@ public class TSVFile {
       for(int s = 0; s < nbSamples; s++)
         m.addHaplotype(samples[s], lines[2 + s][c]);
 
-      m.setDistance(target);
+      m.setDistanceMb(target);
 
       if(c < cTarget)
         leftMarkers[nbLeft - c] = m;
@@ -287,7 +287,7 @@ public class TSVFile {
       if (type == Type.COMPLETE) {
         ancestralLine += T + m.getAncestral();
         mbLine += T + m.getMegaBases();
-        distanceLine += T + m.getDistance();
+        distanceLine += T + m.getDistanceMb();
         rateLine += T + m.getRate();
         cMLine += T + m.getcM();
         thetaLine += T + m.getRecombinationFraction();
@@ -321,7 +321,7 @@ public class TSVFile {
       if(type == Type.COMPLETE){
         ancestralLine += T + m.getAncestral();
         mbLine += T + m.getMegaBases();
-        distanceLine += T + m.getDistance();
+        distanceLine += T + m.getDistanceMb();
         rateLine += T + m.getRate();
         cMLine += T + m.getcM();
         thetaLine += T + m.getRecombinationFraction();
@@ -344,7 +344,6 @@ public class TSVFile {
       out.println(thetaLine);
       out.println(freqLine);
     }
-
     out.close();
   }
 

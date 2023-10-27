@@ -72,18 +72,7 @@ public class EstiageCTranslation {
     return 0;
   }
 
-  /**
-   * Compute n!
-   * @param n an integer
-   * @return factorial(n)
-   */
-  private double fact(int n) {
-    double prod = 1.0;
-    //fact(0) = fact(1) = 1;
-    for (int i = 2; i <= n; i++)
-      prod *= i;
-    return prod;
-  }
+
 
   /**
    * Probability that there was no mutation after several generation
@@ -103,7 +92,7 @@ public class EstiageCTranslation {
       if (input.useStepWiseModel) {
         double lambda = input.mutationRate * (double) nGenerations;
         if (lambda > 0)
-          pmut = Math.pow(lambda, obsstep) * Math.exp(-lambda) / fact(obsstep);
+          pmut = Math.pow(lambda, obsstep) * Math.exp(-lambda) / MathLib.fact(obsstep);
         else
           pmut = 0.0;
       } else

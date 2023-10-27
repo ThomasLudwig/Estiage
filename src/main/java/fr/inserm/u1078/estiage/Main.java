@@ -15,6 +15,7 @@ import java.io.IOException;
 public class Main {
 
   public static final String KEY_VCF2RAW = "vcf2raw";
+  public static final String KEY_PHASE = "phase";
   public static final String KEY_VCF2COMPLETE = "vcf2complete";
   public static final String KEY_VCF2PREINPUT = "vcf2preinput";
   public static final String KEY_VCF2INPUT = "vcf2input";
@@ -25,8 +26,11 @@ public class Main {
   public static final String KEY_COMPLETE2INPUT = "complete2input";
   public static final String KEY_PREINPUT2INPUT = "preinput2input";
   public static final String KEY_RUN = "run";
+  public static final String KEY_RATE = "rate";
   public static final String KEY_NO_COLOR = "--nocolor";
 
+
+  public static final String EXT_PHASED = ".phased";
   public static final String EXT_RAW = ".estiraw";
   public static final String EXT_FULL = ".estifull";
   public static final String EXT_PREINPUT = ".preinput";
@@ -61,6 +65,28 @@ public class Main {
     VCFFile.Mode mode;
 
     switch(args[0].toLowerCase()){
+      case KEY_RATE:
+        if(args.length < 4)
+          usagerate(true);
+        String hapmapfile = args[1];
+        String p1 = args[2];
+        String p2 = args[3];
+        rate(hapmapfile, p1, p2);
+        break;
+      case KEY_PHASE:
+        if(args.length < 3)
+          usagephase(true);
+        String inputfile = args[1];
+        String col = args[2];
+        String position = args[3];
+        int colnum = -1;
+        try{
+          colnum = Integer.parseInt(col);
+        } catch(NumberFormatException e){
+          usagephase(true);
+        }
+        phase(inputfile, colnum, position);
+        break;
       case KEY_VCF2RAW:
         if(args.length < 5)
           usagevcf2raw(true);
@@ -177,6 +203,7 @@ public class Main {
 
   private static void usage(){
     System.err.println(ESTIAGE+"\nUsage :");
+    usagephase(false);
     usagevcf2raw(false);
     usageraw2complete(false);
     usagevcf2complete(false);
@@ -198,6 +225,14 @@ public class Main {
     System.err.println("\t"+String.join(" ",args));
     if(printPrefix)
       System.exit(1);
+  }
+
+  private static void usagerate(boolean printPrefix){
+    printUsage(printPrefix, KEY_RATE, "HapMapFilename", "Position1", "Position2");
+  }
+
+  private static void usagephase(boolean printPrefix){
+    printUsage(printPrefix, KEY_PHASE, INPUT, INPUT+EXT_PHASED, "Column", "TargetPosition");
   }
 
   private static void usagevcf2raw(boolean printPrefix){
@@ -248,6 +283,38 @@ public class Main {
     VCFFile vcfFile = new VCFFile(vcf, mode);
     vcfFile.setVariant(chrPosAllele);
     vcfFile.exportAsRaw(raw);
+  }
+
+  private static void rate(String hapMapFilename, String pos1, String pos2) throws IOException, EstiageFormatException {
+    String hapmapfile = hapMapFilename;
+    int p1 = Integer.parseInt(pos1);
+    int p2 = Integer.parseInt(pos2);
+    int distance = 1 + p2 - p1;
+    double mb = distance*0.000001;
+    HapMap hapMap = new HapMap(hapmapfile, p1, p2);
+    System.out.println("Measuring recombination fraction between ["+p1+"] and ["+p2+"] from file : "+hapmapfile);
+
+    double rate = hapMap.getRate(p1, p2);
+    double cM = MathLib.getCentiMorgan(rate, mb);
+    double d = cM / 100; //from cMorgans to Morgans
+    double recombinationFraction = MathLib.kosambiTheta(d);
+    System.out.println("distance (b) : "+distance);
+    System.out.println("distance (Mb) : "+mb);
+    System.out.println("Rate : "+rate);
+    System.out.println("cM : "+cM);
+    System.out.println("Morgans : "+d);
+    System.out.println("theta : "+recombinationFraction);
+  }
+
+  private static void phase(String inputfile, int col, String position) throws InterruptedException, EstiageFormatException, IOException {
+    Unphased unphased = new Unphased(inputfile, col, position);
+    unphased.phase();
+    unphased.export(inputfile + EXT_PHASED);
+    /*
+    VCFFile vcfFile = new VCFFile(vcf, mode);
+    vcfFile.setVariant(chrPosAllele);
+    vcfFile.exportAsRaw(raw);
+    */
   }
 
   private static void raw2complete(String raw, String complete, String gnomad, String hapmap) throws IOException, EstiageFormatException {

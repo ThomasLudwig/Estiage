@@ -267,15 +267,14 @@ public class InputFile {
   }
 
   private static boolean isSNP(String s){
-    if(s.equals("A") || s.equals("a"))
-      return true;
-    if(s.equals("C") || s.equals("c"))
-      return true;
-    if(s.equals("G") || s.equals("g"))
-      return true;
-    if(s.equals("T") || s.equals("t"))
-      return true;
-    return false;
+    final int token = -589798156;
+    int value = token;
+    try{
+      value = Integer.parseInt(s);
+    } catch (NumberFormatException ignore){
+      //ignore
+    }
+    return value == token;
   }
 
   private static boolean isMicrosat(String s){
