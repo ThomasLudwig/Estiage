@@ -24,38 +24,60 @@ public class Marker {
   private double cM;
   private double recombinationFraction;
   private double rate;
-  private double frequencies;
-  private final HashMap<String, String> haplotypes;
+  private double frequency;
+  private final HashMap<String, String> alleles;
   private String ancestral = "";
 
+  /**
+   * Creates an empty Marker with the given name
+   * @param name the name of the marker
+   */
   public Marker(String name) {
     this.name = name;
-    this.haplotypes = new HashMap<>();
+    this.alleles = new HashMap<>();
   }
 
-  public Marker(VCFFile.Variant variant, String[] samples){
+  /**
+   * Creates a Marker for the given variant and samples
+   * @param variant the variant
+   * @param samples the samples
+   */
+  public Marker(VCFVariant variant, String[] samples){
     this.name = variant.getId();
     this.chr = variant.getChr();
     this.position = variant.getPos();
-    haplotypes = new HashMap<>();
+    alleles = new HashMap<>();
     for(int i = 0 ; i < samples.length; i++)
-      haplotypes.put(samples[i], variant.getGenotypes()[i]);
+      alleles.put(samples[i], variant.getGenotypes()[i]);
   }
 
+  /**
+   * Creates a Marker for the given allele and samples
+   * @param chrposallele the variant in the format chromosome:position:allele
+   * @param samples the samples
+   */
   public Marker(String chrposallele, String[] samples){
     String[] f = chrposallele.split(":");
     this.name = chrposallele;
     this.chr = f[0];
     this.position = Integer.parseInt(f[1]);
-    haplotypes = new HashMap<>();
+    alleles = new HashMap<>();
     for(int i = 0 ; i < samples.length; i++)
-      haplotypes.put(samples[i], f[2]);
+      alleles.put(samples[i], f[2]);
   }
 
+  /**
+   * Set the distance in Megabase between this marker and the target marker
+   * @param target the target marker
+   */
   public void setDistanceMb(Marker target){
     this.distanceMb = Math.abs(this.megaBases - target.megaBases);
   }
 
+  /**
+   * sets the chromosome and position for this marker
+   * @param chrpos chromosome:position
+   */
   public void setChromosomeAndPosition(String chrpos){
     try{
       String[] f = chrpos.split(":");
@@ -66,26 +88,30 @@ public class Marker {
     }
   }
 
+  /**
+   * sets the position for this marker
+   * @param position
+   */
   public void setPosition(int position){
     this.position = position;
     this.megaBases = this.position / 1000000D;
   }
 
+  /**
+   * sets the chromosome of this marker
+   * @param chr
+   */
   public void setChromosome(String chr){
     this.chr = chr;
   }
 
-  public void addHaplotype(String sample, String haplotype){
-    this.haplotypes.put(sample, haplotype);
-  }
-
   /**
-   *
+   * Compute the ancestral allele. If None is found, ancestral allele is set to the default missing value ""
    */
   public void setAncestral(){
     //Counts frequency
     HashMap<String, Integer> counts = new HashMap<>();
-    for(String val : haplotypes.values()){
+    for(String val : alleles.values()){
       if(val != MISSING) {
         Integer nb = counts.get(val);
         if (nb == null)
@@ -114,25 +140,49 @@ public class Marker {
     this.ancestral = allele;
   }
 
+  /**
+   * Gets the ancestral allele for this marker
+   * @return
+   */
   public String getAncestral(){
     return this.ancestral;
   }
 
+  /**
+   * checks of this marker is empty
+   * @return
+   */
   public boolean isEmpty(){
-    for(String val : haplotypes.values())
+    for(String val : alleles.values())
       if(val != null)
         return false;
     return true;
   }
 
+  /**
+   * Gets the position of this marker
+   * @return
+   */
   public int getPosition(){
     return this.position;
   }
 
-  public void setFrequencies(double frequencies) {
-    this.frequencies = frequencies;
+  /**
+   * Sets the frequency for the ancestral allele of this marker
+   * @param frequency the frequency
+   */
+  public void setFrequency(double frequency) {
+    this.frequency = frequency;
   }
 
+  /**
+   * Sets the following values, between this marker and the target<ul>
+   *   <li>recombination rate</li>
+   *   <li>distance in cM</li>
+   *   <li>recombination fraction</li>
+   * </ul>
+   * @param rate the recombination rate between this marker and the target
+   */
   public void setRate(double rate){
     this.rate = rate;
     //rate from hapmap is in cm/Mb, so cm = rate * dist_Mb
@@ -142,51 +192,105 @@ public class Marker {
     this.recombinationFraction = MathLib.kosambiTheta(d);
   }
 
+  /**
+   * gets the chromosome for this marker
+   * @return
+   */
   public String getChromosome(){
     return chr;
   }
 
+  /**
+   * gets the name of this marker
+   * @return
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * Gets the distance in Mb between this marker and the target
+   * @return
+   */
   public double getDistanceMb() {
     return distanceMb;
   }
 
+  /**
+   * Gets the position of this marker in Mb
+   * @return
+   */
   public double getMegaBases() {
     return megaBases;
   }
 
+  /**
+   * Sets the position of this marker in Mb
+   * @param megaBases the position in Mb
+   */
   public void setMegaBases(double megaBases) {
     this.megaBases = megaBases;
   }
 
+  /**
+   * Gets get distance in cM between this marker and the target
+   * @return
+   */
   public double getcM() {
     return cM;
   }
 
+  /**
+   * Gets the recombination fraction theta between this marker and the target
+   * @return
+   */
   public double getRecombinationFraction() {
     return recombinationFraction;
   }
 
+  /**
+   * sets the recombination fraction theta between this marker and the target
+   * @param recombinationFraction theta
+   */
   public void setRecombinationFraction(double recombinationFraction) { this.recombinationFraction = recombinationFraction; }
 
+  /**
+   * Gets the recombination rate between this marker and the target
+   * @return
+   */
   public double getRate() {
     return rate;
   }
 
-  public double getFrequencies() { return frequencies; }
+  /**
+   * Gets the frequency of the ancestral allele for this marker
+   * @return
+   */
+  public double getFrequency() { return frequency; }
 
-  public String getHaplotype(String sample) {
-    return haplotypes.get(sample);
+  /**
+   * Gets the allele for the given sample
+   * @param sample the name of the sample
+   * @return
+   */
+  public String getAllele(String sample) {
+    return alleles.get(sample);
   }
 
-  public void setHaplotype(String sample, String haplotype) {
-    this.haplotypes.put(sample, haplotype);
+  /**
+   * Sets the allele for the given sample
+   * @param sample the sample name
+   * @param allele the allele
+   */
+  public void setAllele(String sample, String allele) {
+    this.alleles.put(sample, allele);
   }
 
+  /**
+   * Gets allele alleles for this marker
+   * @return unsorted collection of allele
+   */
   public Collection<String> getAllAlleles(){
-    return this.haplotypes.values();
+    return this.alleles.values();
   }
 }

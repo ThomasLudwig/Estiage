@@ -1,6 +1,6 @@
 package fr.inserm.u1078.estiage.test;
 
-import fr.inserm.u1078.estiage.EstiageCTranslation;
+import fr.inserm.u1078.estiage.ctranslation.Estiage;
 import fr.inserm.u1078.estiage.MathLib;
 import fr.inserm.u1078.estiage.TSVFile;
 
@@ -12,10 +12,19 @@ import fr.inserm.u1078.estiage.TSVFile;
  * Checked for release on XXXX-XX-XX
  * Unit Test defined on   XXXX-XX-XX
  */
-public class Main {
+public class MainTest {
   public static void main(String[] arg) throws Exception {
     //phase();
-    testKosambi();
+    //testKosambi();
+
+    int N = 200;
+    long lfact = 1;
+    double dfact = 1;
+    for(int i = 2; i <= N; i++){
+      lfact *= i;
+      dfact *= i;
+      System.out.println(i+" -> "+lfact+" / "+dfact);
+    }
   }
 
   private static void testKosambi(){
@@ -44,7 +53,6 @@ public class Main {
 
   private static final void testrun() throws Exception{
     String dat = "C:\\Users\\user\\Downloads\\emmanuelle.mathilde.dat";
-    EstiageCTranslation e = new EstiageCTranslation(dat);
-    e.run();
+    Estiage.run(dat);
   }
 }

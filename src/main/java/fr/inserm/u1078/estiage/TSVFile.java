@@ -20,6 +20,10 @@ import java.util.ArrayList;
  * Unit Test defined on   XXXX-XX-XX
  */
 public class TSVFile {
+
+  /**
+   * The type of file [RAW|COMPLETE]
+   */
   public enum Type{
     RAW,
     COMPLETE
@@ -28,13 +32,13 @@ public class TSVFile {
   /**
    * the marker we want to date
    */
-  private Marker target;
+  final private Marker target;
   /**
-   * the markers on the left (from closest to farthest to the marker to estimate)
+   * the markers on the left (from closest to farthest from the marker to estimate)
    */
   private Marker[] leftMarkers;
   /**
-   * the markers on the right (from closest to farthest to the marker to estimate)
+   * the markers on the right (from closest to farthest from the marker to estimate)
    */
   private Marker[] rightMarkers;
 
@@ -48,16 +52,22 @@ public class TSVFile {
    */
   private Type type;
 
+  /**
+   * Creates a new TSVFile from a file
+   * @param filename the name of the TSV file
+   * @param type the type of file [RAW|COMPLETE]
+   * @throws IOException if the file can't be read
+   * @throws EstiageFormatException if the file can't be parsed
+   */
   public TSVFile(String filename, Type type) throws IOException, EstiageFormatException {
     this.type = type;
 
     //read the whole file into an array
     ArrayList<String[]> tmp = new ArrayList<>();
-    int nbCols = 0;
     UniversalReader in = new UniversalReader(filename);
     String line = in.readLine();
     String[] f = line.split("\t", -1);
-    nbCols = f.length;
+    int nbCols = f.length;
     tmp.add(f);
     int nbLines = 1;
     while ((line = in.readLine()) != null) {
@@ -75,8 +85,7 @@ public class TSVFile {
     String[][] lines = new String[nbLines][nbCols];
     for(int i = 0 ; i < nbLines; i++) {
       String[] tt = tmp.get(i);
-      for (int j = 0 ; j < nbCols; j++)
-        lines[i][j] = tt[j];
+      System.arraycopy(tt, 0, lines[i], 0, nbCols);
     }
 
     //the whole file is in memory in a String[][]
@@ -110,7 +119,6 @@ public class TSVFile {
 
     final int cTarget = nbLeft + 1;
 
-    target = null;
     leftMarkers = new Marker[nbLeft];
     rightMarkers = new Marker[nbRight];
     samples = new String[nbSamples];
@@ -131,10 +139,10 @@ public class TSVFile {
       if(type == Type.COMPLETE){
         m.setMegaBases(Double.parseDouble(lines[lMb][c]));
         m.setRecombinationFraction(Double.parseDouble(lines[lTheta][c]));
-        m.setFrequencies(Double.parseDouble(lines[lFreq][c]));
+        m.setFrequency(Double.parseDouble(lines[lFreq][c]));
       }
       for(int s = 0; s < nbSamples; s++)
-        m.addHaplotype(samples[s], lines[2 + s][c]);
+        m.setAllele(samples[s], lines[2 + s][c]);
 
       m.setDistanceMb(target);
 
@@ -151,6 +159,13 @@ public class TSVFile {
     this.rightMarkers = this.computeAncestralAlleles(this.rightMarkers);
   }
 
+  /**
+   * Creates a TSVFile from data
+   * @param target the target Marker
+   * @param leftMarkers the array of left Markers
+   * @param rightMarkers the array of right Markers
+   * @param samples the array of sample names
+   */
   public TSVFile(Marker target, Marker[] leftMarkers, Marker[] rightMarkers, String[] samples){
     this.target = target;
     this.leftMarkers = leftMarkers;
@@ -187,11 +202,11 @@ public class TSVFile {
       Marker m = markers[i];
       m.setAncestral();
       String ancestral = m.getAncestral();
-      String alleles = "";
+      StringBuilder alleles = new StringBuilder();
       for(String val : m.getAllAlleles())
-        alleles += ","+val;
+        alleles.append(",").append(val);
       if(alleles.length() > 0)
-        alleles = alleles.substring(1);
+        alleles = new StringBuilder(alleles.substring(1));
       Message.info("["+i+"] : ["+ancestral+"] {"+ alleles+"}");
       if("-1".equals(ancestral)) {
         Message.info("Last Marker ("+i+")");
@@ -203,18 +218,18 @@ public class TSVFile {
         return ret;
       } else {
         ArrayList<String> diff = new ArrayList<>();
-        String skip = "Skip :";
+        StringBuilder skip = new StringBuilder("Skip :");
         for (String sample : samples) {
-          String haplo = m.getHaplotype(sample);
-          if (!haplo.isEmpty() && !haplo.equals(ancestral)) {
+          String haplotype = m.getAllele(sample);
+          if (!haplotype.isEmpty() && !haplotype.equals(ancestral)) {
             diff.add(sample);
-            skip += " " + sample;
+            skip.append(" ").append(sample);
           }
         }
-        Message.info(skip);
+        Message.info(skip.toString());
         for (int j = i + 1; j < markers.length; j++)
           for (String sample : diff)
-            markers[j].setHaplotype(sample, Marker.MISSING);
+            markers[j].setAllele(sample, Marker.MISSING);
       }
     }
     return markers;
@@ -240,92 +255,109 @@ public class TSVFile {
       HapMap hapmap = new HapMap(hapmapFilename, first.getPosition(), last.getPosition());
       Message.info("Applying");
       for(Marker m : leftMarkers) {
-        gnomad.applyFrequency(m);
-        hapmap.applyRate(m, target);
+        m.setFrequency(gnomad.getFrequency(m.getChromosome(), m.getPosition(), m.getAncestral()));
+        m.setRate(hapmap.getRate(m, target));
       }
       for(Marker m : rightMarkers) {
-        gnomad.applyFrequency(m);
-        hapmap.applyRate(m, target);
+        m.setFrequency(gnomad.getFrequency(m.getChromosome(), m.getPosition(), m.getAncestral()));
+        m.setRate(hapmap.getRate(m, target));
       }
     }
     type = Type.COMPLETE;
   }
 
+  /**
+   * Gets the left markers from the TSVFile
+   * @return the left markers
+   */
   public Marker[] getLeftMarkers() { return leftMarkers; }
 
+  /**
+   * Gets the right markers from the TSVFile
+   * @return the right markers
+   */
   public Marker[] getRightMarkers() {
     return rightMarkers;
   }
 
+  /**
+   * Gets the array of Samples
+   * @return the array of samples
+   */
   public String[] getSamples() {
     return samples;
   }
 
+  /**
+   * Exports the data to a file
+   * @param filename the name of the output file
+   * @throws IOException if the file can't be written
+   */
   public void export(String filename) throws IOException {
     PrintWriter out = new PrintWriter(new FileWriter(filename));
-    String header  = ".";
-    String nameLine = "Samples\\Markers";
-    String[] samplesLines = (String[])samples.clone();
-    String positionLine="Position";
-    String ancestralLine="Ancestral";
-    String mbLine="mb";
-    String distanceLine="Distance";
-    String rateLine="Mean rate";
-    String cMLine="cM";
-    String thetaLine="θ Recombination Fraction";
-    String freqLine="Freq";
+    StringBuilder header  = new StringBuilder(".");
+    StringBuilder nameLine = new StringBuilder("Samples\\Markers");
+    String[] samplesLines =samples.clone();
+    StringBuilder positionLine= new StringBuilder("Position");
+    StringBuilder ancestralLine= new StringBuilder("Ancestral");
+    StringBuilder mbLine= new StringBuilder("mb");
+    StringBuilder distanceLine= new StringBuilder("Distance");
+    StringBuilder rateLine= new StringBuilder("Mean rate");
+    StringBuilder cMLine= new StringBuilder("cM");
+    StringBuilder thetaLine= new StringBuilder("θ Recombination Fraction");
+    StringBuilder freqLine= new StringBuilder("Freq");
     Marker m;
 
     for(int i = leftMarkers.length-1; i >= 0; i--) {
-      header += T + "Left" + (i + 1);
+      header.append(T + "Left").append(i + 1);
       m = leftMarkers[i];
-      nameLine += T + m.getName();
+      nameLine.append(T).append(m.getName());
 
       for(int s = 0; s < samples.length; s++)
-        samplesLines[s] += T + m.getHaplotype(samples[s]);
-      positionLine += T + m.getChromosome()+":"+m.getPosition();
+        samplesLines[s] += T + m.getAllele(samples[s]);
+      positionLine.append(T).append(m.getChromosome()).append(":").append(m.getPosition());
       if (type == Type.COMPLETE) {
-        ancestralLine += T + m.getAncestral();
-        mbLine += T + m.getMegaBases();
-        distanceLine += T + m.getDistanceMb();
-        rateLine += T + m.getRate();
-        cMLine += T + m.getcM();
-        thetaLine += T + m.getRecombinationFraction();
-        freqLine += T + m.getFrequencies();
+        ancestralLine.append(T).append(m.getAncestral());
+        mbLine.append(T).append(m.getMegaBases());
+        distanceLine.append(T).append(m.getDistanceMb());
+        rateLine.append(T).append(m.getRate());
+        cMLine.append(T).append(m.getcM());
+        thetaLine.append(T).append(m.getRecombinationFraction());
+        freqLine.append(T).append(m.getFrequency());
       }
     }
 
     m = target;
-    header+= T + "Target";
-    nameLine+= T + m.getName();
+    header.append(T + "Target");
+    nameLine.append(T).append(m.getName());
     for(int s = 0; s < samples.length; s++)
       samplesLines[s] += T;
-    positionLine += T + m.getChromosome()+":"+m.getPosition();
+    positionLine.append(T).append(m.getChromosome()).append(":").append(m.getPosition());
     if(type == Type.COMPLETE) {
-      ancestralLine += T;
-      mbLine += T + m.getMegaBases();
-      distanceLine += T;
-      rateLine += T;
-      cMLine += T;
-      thetaLine += T;
-      freqLine += T;
+      ancestralLine.append(T);
+      mbLine.append(T).append(m.getMegaBases());
+      distanceLine.append(T);
+      rateLine.append(T);
+      cMLine.append(T);
+      thetaLine.append(T);
+      freqLine.append(T);
     }
 
     for(int i = 0; i < rightMarkers.length; i++){
-      header += T + "Right"+(i+1);
+      header.append(T + "Right").append(i + 1);
       m = rightMarkers[i];
-      nameLine += T + m.getName();
+      nameLine.append(T).append(m.getName());
       for(int s = 0; s < samples.length; s++)
-        samplesLines[s] += T + m.getHaplotype(samples[s]);
-      positionLine += T + m.getChromosome()+":"+m.getPosition();
+        samplesLines[s] += T + m.getAllele(samples[s]);
+      positionLine.append(T).append(m.getChromosome()).append(":").append(m.getPosition());
       if(type == Type.COMPLETE){
-        ancestralLine += T + m.getAncestral();
-        mbLine += T + m.getMegaBases();
-        distanceLine += T + m.getDistanceMb();
-        rateLine += T + m.getRate();
-        cMLine += T + m.getcM();
-        thetaLine += T + m.getRecombinationFraction();
-        freqLine += T + m.getFrequencies();
+        ancestralLine.append(T).append(m.getAncestral());
+        mbLine.append(T).append(m.getMegaBases());
+        distanceLine.append(T).append(m.getDistanceMb());
+        rateLine.append(T).append(m.getRate());
+        cMLine.append(T).append(m.getcM());
+        thetaLine.append(T).append(m.getRecombinationFraction());
+        freqLine.append(T).append(m.getFrequency());
       }
     }
 
@@ -347,6 +379,9 @@ public class TSVFile {
     out.close();
   }
 
+  /**
+   * Prints summary information for this file
+   */
   public void printSummary(){
     String message = "Target "+target.getName()+" ("+target.getChromosome()+":"+target.getPosition()+")";
     Marker left = leftMarkers[leftMarkers.length-1];

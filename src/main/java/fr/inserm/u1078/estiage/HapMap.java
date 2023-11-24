@@ -17,6 +17,13 @@ import java.util.*;
 public class HapMap {
   private final TreeMap<Integer, Double> mutationRates;
 
+  /**
+   * Creates an HapMap object and loads the data
+   * @param filename the name of the HapMap file
+   * @param first the first position to consider
+   * @param last the last position to consider
+   * @throws IOException
+   */
   public HapMap(String filename, int first, int last) throws IOException {
     this.mutationRates = HapMap.load(filename, first, last);
     if(mutationRates == null){
@@ -55,7 +62,7 @@ public class HapMap {
 
     //Need to read line BEFORE first marker (hard, buffer each line and unbuffer after first marker) and Line AFTER last marker (easy)
     //Gradiant rate between each position (P1-P2)/N
-    //Mean from gradiant between each markers
+    //Mean from gradiant between each marker
     int prevPos = -1;
     double prevRate = -1D;
     int read = 0;
@@ -100,26 +107,14 @@ public class HapMap {
     Message.info("First : ["+lowest+" / "+mutationRates.get(lowest)+"]");
     Message.info("Last : ["+highest+" / "+mutationRates.get(highest)+"]");
 
-    /*
-    //here we have all point, fill values between points
-    ArrayList<Integer> positions = new ArrayList<>(mutationRates.navigableKeySet());
-    for(int i = 1; i < positions.size(); i++){
-      int f = positions.get(i-1);
-      int l = positions.get(i);
-      int interval = l-f;
-      if(interval > 1) {
-        double val = mutationRates.get(f);
-        double increment = (mutationRates.get(l) - val) / interval;
-        for(int c = f+1; c < l; c++){
-          val += increment;
-          mutationRates.put(c, val);
-        }
-      }
-    }
-    */
     return mutationRates;
   }
 
+  /**
+   * Add a position for an existing marker. If the position already exist, nothing to do. Otherwise, compute the rate at the position
+   * @param pos
+   * @throws EstiageFormatException
+   */
   private void addMarker(int pos) throws EstiageFormatException {
     if(mutationRates.isEmpty())
       throw new EstiageFormatException("Hapmap data are empty");
@@ -161,6 +156,12 @@ public class HapMap {
     throw new EstiageFormatException("Could not add position ["+pos+"] in hapmap data ["+first+";"+last+"]");
   }
 
+  /**
+   * Gets the list of available positions in [p1;p2]
+   * @param p1 the first position
+   * @param p2 the second position
+   * @return
+   */
   private ArrayList<Integer> getPositions(int p1, int p2){
     ArrayList<Integer> ret = new ArrayList<>();
     for(Integer pos : mutationRates.navigableKeySet())
@@ -169,6 +170,13 @@ public class HapMap {
     return ret;
   }
 
+  /**
+   * Gets the mean recombination rate between two unsorted positions
+   * @param p1 the first position
+   * @param p2 the second position
+   * @return the recombination rate
+   * @throws EstiageFormatException
+   */
   public double getRate(int p1, int p2) throws EstiageFormatException {
     //Message.debug("From ["+p1+"] to ["+p2+"]");
     //add points if missing
@@ -176,7 +184,9 @@ public class HapMap {
     addMarker(p2);
     //Message.debug("At["+p1+"]>["+mutationRates.get(p1)+"], At["+p2+"]>["+mutationRates.get(p2)+"]");
     //get all points in interval
-    ArrayList<Integer> points = getPositions(p1, p2);
+    int first = Math.min(p1, p2);
+    int last = Math.max(p1, p2);
+    ArrayList<Integer> points = getPositions(first, last);
 
     double rateSum = 0;
 
@@ -194,35 +204,20 @@ public class HapMap {
     }
     //here, add right
     rateSum += rightValue;
-    int distance = 1 + p2 - p1;
+    int distance = 1 + last - first;
     //Message.debug("Mean["+(rateSum / distance)+"]=["+rateSum+"]/["+distance+"]");
     return rateSum / distance;
 
-        /*
-    double sum = 0;
-    for(int p = p1; p <= p2; p++) {
-      Double rate = mutationRates.get(p);
-      if(rate == null)
-        Message.warning("Could not find recombination rate for position ["+p+"]");
-      int first = mutationRates.firstKey();
-      double firstRate = mutationRates.get(first);
-      int last = mutationRates.lastKey();
-      double lastRate = mutationRates.get(last);
-      if(p < first)
-        rate = firstRate;
-      if(p > last)
-        rate = lastRate;
-
-      sum += rate;
-    }
-    double rate = sum / (1+p2-p1);
-    m.setRate(rate);*/
   }
 
-  //not rate at the marker, but mean rate between the marker and the target ?
-  public void applyRate(Marker m, Marker target) throws EstiageFormatException {
-    int p1 = Math.min(m.getPosition(), target.getPosition());
-    int p2 = Math.max(m.getPosition(), target.getPosition());
-    m.setRate(getRate(p1, p2));
+  /**
+   * Gets the mean recombination rate between two unsorted markers
+   * @param m1 the first marker
+   * @param m2 the second marker
+   * @return the mean recombination rate
+   * @throws EstiageFormatException
+   */
+  public double getRate(Marker m1, Marker m2) throws EstiageFormatException {
+    return getRate(m1.getPosition(), m2.getPosition());
   }
 }
